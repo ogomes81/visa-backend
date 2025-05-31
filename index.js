@@ -1,30 +1,40 @@
-import express from 'express';
-import cors from 'cors';
-import 'dotenv/config';
-import OpenAI from 'openai';
+import express from 'express'
+import cors from 'cors'
+import 'dotenv/config'
+import OpenAI from 'openai'
 
-const app = express();
-app.use(cors());
-app.use(cors({ origin: '*' }));
-app.use(express.json());
+const app = express()
+const port = process.env.PORT || 3000
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+app.use(cors({ origin: '*' }))
+app.use(express.json())
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
 
 app.post('/chat', async (req, res) => {
-  console.log("Received request:", req.body);
-  const { nationality, destination, purpose } = req.body;
-  const prompt = `A ${nationality} citizen wants to travel to ${destination} for ${purpose}. What visa do they need and what documents are required?`;
+  const { messages } = req.body
+
+  if (!messages || !Array.isArray(messages)) {
+    return res.status(400).json({ error: 'Invalid message format' })
+  }
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [{ role: "user", content: prompt }],
-    });
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo', // change to gpt-4 if you have access
+      messages: messages
+    })
 
-    res.json({ response: completion.choices[0].message.content });
+    res.json({ response: response.choices[0].message.content })
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('OpenAI Error:', err)
+    res.status(500).json({ error: err.message })
   }
-});
+})
 
-app.listen(3000, () => console.log("Server running on port 3000"));
+app.get('/', (req, res) => {
+  res.send('Visa Assistant Chatbot backend is running.')
+})
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`)
+})
